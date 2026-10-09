@@ -240,3 +240,45 @@ Devolvé ÚNICAMENTE el informe numerado del 1 al 6 con las líneas detectadas o
 
 
 
+PROMPT
+P6
+README · la documentación
+Bloque 4 · el último prompt
+Las partes 5 y 6 las escribe el estudiante a mano: son suyas.
+
+Escribí el archivo README.md en español con estas seis partes:
+
+1. Nombre y la frase de mi ficha.
+2. Qué hace y cómo se usa, en tres líneas.
+3. El enlace para abrirlo.
+4. Cómo correrlo en otra máquina: los comandos exactos.
+5. Dejá este espacio en blanco con un comentario para que lo llene yo:
+   «Qué dirigí yo y qué error encontré probando».
+6. Declaración de autoría: qué herramienta usé, que el código lo generó un
+   agente de IA bajo mi dirección, y qué partes puedo explicar.
+
+No inventes nada en las partes 5 y 6: dejalas para que las complete yo.
+PROMPT
+R1
+RESCATE · cuando algo falla
+En cualquier momento
+Pedir el diagnóstico antes que el arreglo ahorra la mitad del tiempo.
+
+Cuando hago [ACCIÓN EXACTA], pasa [LO QUE PASA]. Esperaba [LO CORRECTO].
+
+Mensaje de error, textual:
+[PEGALO COMPLETO, CON EL NÚMERO DE LÍNEA]
+
+Decime las tres causas más probables, de la más a la menos probable.
+No modifiques archivos todavía.
+PROMPT
+R2
+RESCATE · ponerle límites
+Cuando el agente toca de más
+Se pega una vez y vale para el resto de la sesión.
+
+De ahora en adelante en esta sesión:
+- No modifiques ningún archivo sin mostrarme antes el cambio.
+- No instales librerías ni crees archivos nuevos sin preguntarme.
+- Si creés que hay que cambiar algo que no te pedí, decímelo en lugar de hacerlo.
+- Si no estás seguro de poder hacer algo bien, decímelo antes de intentarlo.

@@ -18,12 +18,28 @@
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html {
+  overflow-x: hidden;
+}
+
+#app {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100vw;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
 body {
-  min-width: 320px;
+  min-width: 0;
   min-height: 100vh;
   margin: 0;
+  overflow-x: hidden;
   background-color: var(--fondo);
   background-image:
     linear-gradient(#22d3ee0a 1px, transparent 1px),
@@ -161,6 +177,7 @@ h1 {
 
 .boton-principal {
   display: inline-flex;
+  min-width: 44px;
   min-height: 56px;
   align-items: center;
   justify-content: center;
@@ -388,6 +405,7 @@ kbd {
 
 .boton-movimiento {
   display: flex;
+  min-width: 44px;
   min-width: 190px;
   min-height: 52px;
   align-items: center;
@@ -399,7 +417,7 @@ kbd {
   font-size: 16px;
   font-weight: 800;
   cursor: pointer;
-  touch-action: manipulation;
+  touch-action: none;
 }
 
 .boton-movimiento:hover {
@@ -487,7 +505,11 @@ kbd {
 
 @media (max-width: 680px) {
   .marco {
-    padding: 24px 16px;
+    padding:
+      max(24px, env(safe-area-inset-top))
+      max(16px, env(safe-area-inset-right))
+      max(24px, env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left));
   }
 
   .pantalla-inicio .cabecera {
@@ -536,7 +558,7 @@ kbd {
   }
 
   .boton-movimiento {
-    min-width: 0;
+    min-width: 44px;
     flex: 1;
     gap: 6px;
     padding: 8px;
@@ -553,8 +575,8 @@ kbd {
 
 @media (max-width: 380px) {
   .marco {
-    padding-right: 12px;
-    padding-left: 12px;
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-left: max(12px, env(safe-area-inset-left));
   }
 
   .marcador span {
@@ -563,6 +585,17 @@ kbd {
 
   .matrices {
     gap: 16px 8px;
+  }
+
+  .controles {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .boton-movimiento {
+    width: 100%;
+    justify-content: center;
   }
 
   .etiqueta {

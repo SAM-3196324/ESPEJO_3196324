@@ -2,7 +2,6 @@ import './estilo.css';
 
 import {
   CONFIG,
-  agregarEntidad,
   avanzarPulso,
   crearEstadoInicial,
   generarPareja,
@@ -15,6 +14,7 @@ import {
 
 let estado: EstadoJuego | undefined;
 let temporizador: number | undefined;
+let ultimoMovimientoPorPuntero = 0;
 
 const raiz = document.querySelector<HTMLDivElement>('#app');
 if (!raiz) throw new Error('Falta el contenedor principal de ESPEJO.');
@@ -171,8 +171,20 @@ raiz.addEventListener('click', (evento) => {
   }
 
   if (boton.dataset.movimiento === '-1' || boton.dataset.movimiento === '1') {
-    accionar(Number(boton.dataset.movimiento) as Direccion);
+    if (evento.detail === 0 || Date.now() - ultimoMovimientoPorPuntero > 800) {
+      accionar(Number(boton.dataset.movimiento) as Direccion);
+    }
   }
+});
+
+raiz.addEventListener('pointerdown', (evento) => {
+  if (!(evento.target instanceof Element)) return;
+  const boton = evento.target.closest<HTMLButtonElement>('button[data-movimiento]');
+  if (!boton || (boton.dataset.movimiento !== '-1' && boton.dataset.movimiento !== '1')) return;
+
+  evento.preventDefault();
+  ultimoMovimientoPorPuntero = Date.now();
+  accionar(Number(boton.dataset.movimiento) as Direccion);
 });
 
 window.addEventListener('keydown', (evento) => {
