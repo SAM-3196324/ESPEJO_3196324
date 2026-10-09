@@ -9,18 +9,31 @@ export const CONFIG = {
   UMBRAL_FASE_CRUZADA: 800, // [puntos] puntuacion que activa la fase cruzada
   PUNTOS_ESQUIVA: 25, // [puntos] recompensa base por obstaculo esquivado
   PUNTOS_GEMA: 50, // [puntos] recompensa base por gema recolectada
+  AMBAR_POR_GEMA: 8, // [ambar] recompensa por gema recolectada
+  AMBAR_POR_ESQUIVA: 2, // [ambar] recompensa por obstaculo esquivado
   COMBO_MINIMO: 1, // [multiplicador] combo inicial
   COMBO_MAXIMO: 5, // [multiplicador] limite del combo
   PASOS_PARA_COMBO: 2, // [acciones] acciones sincronizadas necesarias por nivel de combo
   INTERVALO_CAIDA: 550, // [ms] intervalo visual sugerido entre descensos
   PROBABILIDAD_GEMA: 0.28, // [probabilidad] posibilidad de que un elemento sea gema
   MAXIMO_ENTIDADES: 16, // [entidades] limite simultaneo de entidades del tablero
+  PRECIO_ASPECTO_SOLAR: 60, // [ambar] precio del aspecto solar
+  PRECIO_ASPECTO_PRISMA: 120, // [ambar] precio del aspecto prisma
+  PRECIO_ASPECTO_CELESTE: 220, // [ambar] precio del aspecto celeste
 } as const;
 
 export type Direccion = -1 | 1;
 export type FaseInversion = "horizontal" | "vertical" | "cruzada";
 export type ClaseEntidad = "obstaculo" | "gema";
 export type EstadoPartida = "en_curso" | "victoria" | "derrota";
+export type AspectoFicha = "cian" | "solar" | "prisma" | "celeste";
+
+export const ASPECTOS: readonly { id: AspectoFicha; nombre: string; precio: number }[] = [
+  { id: "cian", nombre: "Cian original", precio: 0 },
+  { id: "solar", nombre: "Pulso solar", precio: CONFIG.PRECIO_ASPECTO_SOLAR },
+  { id: "prisma", nombre: "Prisma rúnico", precio: CONFIG.PRECIO_ASPECTO_PRISMA },
+  { id: "celeste", nombre: "Cometa celeste", precio: CONFIG.PRECIO_ASPECTO_CELESTE },
+];
 
 export interface Posicion {
   carril: number;
@@ -58,6 +71,9 @@ export interface EstadoJuego {
   esquivas: number;
   gemasRecolectadas: number;
   impactos: number;
+  ambar: number;
+  aspecto: AspectoFicha;
+  aspectosDesbloqueados: AspectoFicha[];
 }
 
 /** Generador Mulberry32: misma semilla, misma secuencia en toda plataforma JS. */
@@ -95,6 +111,9 @@ export function crearEstadoInicial(semilla: number, record = 0): EstadoJuego {
     esquivas: 0,
     gemasRecolectadas: 0,
     impactos: 0,
+    ambar: 0,
+    aspecto: "cian",
+    aspectosDesbloqueados: ["cian"],
   };
 }
 
@@ -117,7 +136,6 @@ function sumaPuntos(estado: EstadoJuego, base: number): boolean {
   estado.puntuacion += base * estado.multiplicadorCombo;
   estado.record = Math.max(estado.record, estado.puntuacion);
   estado.fase = obtenerFase(estado.puntuacion);
-  if (estado.puntuacion >= CONFIG.PUNTUACION_META) estado.estado = "victoria";
   return true;
 }
 
@@ -176,16 +194,21 @@ export function avanzarPulso(estado: EstadoJuego): boolean {
   let huboCambio = false;
   const restantes: EntidadTablero[] = [];
   const descendidas = estado.entidades.map((entidad) => ({ ...entidad, fila: entidad.fila + 1 }));
-  const hayImpacto = descendidas.some((entidad) => {
+  const entidadesImpactadas = descendidas.filter((entidad) => {
     const ficha = entidad.matriz === "normal" ? estado.fichaNormal : estado.fichaReflejo;
     return entidad.clase === "obstaculo" && coincide(entidad, ficha);
   });
-  if (hayImpacto) {
-    estado.impactos = 1;
-    estado.estado = "derrota";
-    return true;
+  const identificadoresImpactados = new Set(entidadesImpactadas.map((entidad) => entidad.id));
+  if (entidadesImpactadas.length > 0) {
+    estado.impactos += entidadesImpactadas.length;
+    estado.multiplicadorCombo = CONFIG.COMBO_MINIMO;
+    estado.accionesSincronizadas = 0;
   }
   for (const descendida of descendidas) {
+    if (identificadoresImpactados.has(descendida.id)) {
+      huboCambio = true;
+      continue;
+    }
     if (estado.estado !== "en_curso") {
       if (descendida.fila < CONFIG.FILAS) restantes.push(descendida);
       continue;
@@ -194,6 +217,7 @@ export function avanzarPulso(estado: EstadoJuego): boolean {
     if (coincide(descendida, ficha)) {
       huboCambio = true;
       estado.gemasRecolectadas += 1;
+      estado.ambar += CONFIG.AMBAR_POR_GEMA;
       registrarSincronia(estado);
       sumaPuntos(estado, CONFIG.PUNTOS_GEMA);
       continue;
@@ -202,6 +226,7 @@ export function avanzarPulso(estado: EstadoJuego): boolean {
       huboCambio = true;
       if (descendida.clase === "obstaculo") {
         estado.esquivas += 1;
+        estado.ambar += CONFIG.AMBAR_POR_ESQUIVA;
         registrarSincronia(estado);
         sumaPuntos(estado, CONFIG.PUNTOS_ESQUIVA);
       }
@@ -214,11 +239,35 @@ export function avanzarPulso(estado: EstadoJuego): boolean {
   return huboCambio;
 }
 
+export function comprarAspecto(estado: EstadoJuego, aspecto: AspectoFicha): boolean {
+  const opcion = ASPECTOS.find((actual) => actual.id === aspecto);
+  if (
+    estado.estado !== "en_curso" ||
+    !opcion ||
+    estado.aspectosDesbloqueados.includes(aspecto) ||
+    estado.ambar < opcion.precio
+  ) return false;
+  estado.ambar -= opcion.precio;
+  estado.aspectosDesbloqueados.push(aspecto);
+  estado.aspecto = aspecto;
+  return true;
+}
+
+export function seleccionarAspecto(estado: EstadoJuego, aspecto: AspectoFicha): boolean {
+  if (estado.estado !== "en_curso" || !estado.aspectosDesbloqueados.includes(aspecto)) return false;
+  estado.aspecto = aspecto;
+  return true;
+}
+
 /** Reinicia una partida conservando el record indicado. */
 export function reiniciarPartida(destino: EstadoJuego, semilla: number): boolean {
   const record = destino.record;
   const reiniciado = crearEstadoInicial(semilla, record);
-  Object.assign(destino, reiniciado);
+  Object.assign(destino, reiniciado, {
+    ambar: destino.ambar,
+    aspecto: destino.aspecto,
+    aspectosDesbloqueados: [...destino.aspectosDesbloqueados],
+  });
   return true;
 }
 

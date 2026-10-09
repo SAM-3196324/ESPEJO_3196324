@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   agregarEntidad,
   avanzarPulso,
+  comprarAspecto,
   crearEstadoInicial,
   moverFichas,
+  reiniciarPartida,
   CONFIG,
 } from "../src/logica";
 
@@ -42,34 +44,24 @@ describe("Reglas de ESPEJO", () => {
     expect(moverFichas(estado, 1)).toBe(false);
   });
 
-  it("debe evaluar la condicion de derrota por colision contra obstaculo y la condicion de victoria al alcanzar el puntaje objetivo", () => {
-    const estadoDerrota = crearEstadoInicial(123);
-    expect(agregarEntidad(estadoDerrota, {
+  it("debe registrar los impactos, romper el combo y mantener la partida activa tras un choque", () => {
+    const estado = crearEstadoInicial(123);
+    estado.multiplicadorCombo = 4;
+    expect(agregarEntidad(estado, {
       matriz: "normal",
-      carril: estadoDerrota.fichaNormal.carril,
-      fila: estadoDerrota.fichaNormal.fila - 1,
+      carril: estado.fichaNormal.carril,
+      fila: estado.fichaNormal.fila - 1,
       clase: "obstaculo",
     })).toBe(true);
 
-    expect(avanzarPulso(estadoDerrota)).toBe(true);
-    expect(estadoDerrota.estado).toBe("derrota");
-    expect(estadoDerrota.impactos).toBe(1);
-
-    const estadoVictoria = crearEstadoInicial(123);
-    estadoVictoria.puntuacion = CONFIG.PUNTUACION_META - CONFIG.PUNTOS_GEMA;
-    expect(agregarEntidad(estadoVictoria, {
-      matriz: "normal",
-      carril: estadoVictoria.fichaNormal.carril,
-      fila: estadoVictoria.fichaNormal.fila - 1,
-      clase: "gema",
-    })).toBe(true);
-
-    expect(avanzarPulso(estadoVictoria)).toBe(true);
-    expect(estadoVictoria.estado).toBe("victoria");
-    expect(estadoVictoria.puntuacion).toBeGreaterThanOrEqual(CONFIG.PUNTUACION_META);
+    expect(avanzarPulso(estado)).toBe(true);
+    expect(estado.estado).toBe("en_curso");
+    expect(estado.impactos).toBe(1);
+    expect(estado.multiplicadorCombo).toBe(CONFIG.COMBO_MINIMO);
+    expect(estado.entidades).toHaveLength(0);
   });
 
-  it("debe simular una partida completa desde el inicio, avanzando pasos, acumulando combo de sincronia, transitando las fases de espejo y alcanzando la victoria", () => {
+  it("debe permitir una partida infinita que supera la meta y transita las tres fases", () => {
     const estado = crearEstadoInicial(123);
     const fasesObservadas = new Set([estado.fase]);
 
@@ -94,9 +86,44 @@ describe("Reglas de ESPEJO", () => {
       fasesObservadas.add(estado.fase);
     }
 
-    expect(estado.estado).toBe("victoria");
+    expect(estado.estado).toBe("en_curso");
     expect(estado.puntuacion).toBeGreaterThanOrEqual(CONFIG.PUNTUACION_META);
     expect(estado.multiplicadorCombo).toBe(CONFIG.COMBO_MAXIMO);
     expect(fasesObservadas).toEqual(new Set(["horizontal", "vertical", "cruzada"]));
+  });
+
+  it("debe comprar aspectos con ambar y conservar las compras al reiniciar", () => {
+    const estado = crearEstadoInicial(123);
+    estado.ambar = CONFIG.PRECIO_ASPECTO_SOLAR;
+
+    expect(comprarAspecto(estado, "solar")).toBe(true);
+    expect(estado.aspecto).toBe("solar");
+    expect(estado.ambar).toBe(0);
+    expect(reiniciarPartida(estado, 456)).toBe(true);
+    expect(estado.aspecto).toBe("solar");
+    expect(estado.aspectosDesbloqueados).toContain("solar");
+    expect(estado.ambar).toBe(0);
+  });
+
+  it("debe otorgar ambar al recolectar una gema y al esquivar un obstaculo", () => {
+    const estadoGema = crearEstadoInicial(123);
+    expect(agregarEntidad(estadoGema, {
+      matriz: "normal",
+      carril: estadoGema.fichaNormal.carril,
+      fila: estadoGema.fichaNormal.fila - 1,
+      clase: "gema",
+    })).toBe(true);
+    expect(avanzarPulso(estadoGema)).toBe(true);
+    expect(estadoGema.ambar).toBe(CONFIG.AMBAR_POR_GEMA);
+
+    const estadoEsquiva = crearEstadoInicial(456);
+    expect(agregarEntidad(estadoEsquiva, {
+      matriz: "normal",
+      carril: 0,
+      fila: CONFIG.FILAS - 1,
+      clase: "obstaculo",
+    })).toBe(true);
+    expect(avanzarPulso(estadoEsquiva)).toBe(true);
+    expect(estadoEsquiva.ambar).toBe(CONFIG.AMBAR_POR_ESQUIVA);
   });
 });
