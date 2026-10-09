@@ -207,7 +207,7 @@ export function avanzarPulso(estado: EstadoJuego): boolean {
       }
       continue;
     }
-    if (descendida.fila !== entidad.fila) huboCambio = true;
+    huboCambio = true;
     restantes.push(descendida);
   }
   estado.entidades = restantes;
