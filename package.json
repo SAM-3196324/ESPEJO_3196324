@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "test": "vitest run"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "eslint": "^10.12.0",
