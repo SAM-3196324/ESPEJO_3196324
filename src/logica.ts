@@ -203,6 +203,8 @@ export function avanzarPulso(estado: EstadoJuego): boolean {
     estado.impactos += entidadesImpactadas.length;
     estado.multiplicadorCombo = CONFIG.COMBO_MINIMO;
     estado.accionesSincronizadas = 0;
+    estado.estado = "derrota";
+    return true;
   }
   for (const descendida of descendidas) {
     if (identificadoresImpactados.has(descendida.id)) {

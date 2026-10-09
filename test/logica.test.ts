@@ -44,7 +44,7 @@ describe("Reglas de ESPEJO", () => {
     expect(moverFichas(estado, 1)).toBe(false);
   });
 
-  it("debe registrar los impactos, romper el combo y mantener la partida activa tras un choque", () => {
+  it("debe terminar la partida, registrar el impacto y romper el combo al chocar", () => {
     const estado = crearEstadoInicial(123);
     estado.multiplicadorCombo = 4;
     expect(agregarEntidad(estado, {
@@ -55,10 +55,10 @@ describe("Reglas de ESPEJO", () => {
     })).toBe(true);
 
     expect(avanzarPulso(estado)).toBe(true);
-    expect(estado.estado).toBe("en_curso");
+    expect(estado.estado).toBe("derrota");
     expect(estado.impactos).toBe(1);
     expect(estado.multiplicadorCombo).toBe(CONFIG.COMBO_MINIMO);
-    expect(estado.entidades).toHaveLength(0);
+    expect(moverFichas(estado, 1)).toBe(false);
   });
 
   it("debe permitir una partida infinita que supera la meta y transita las tres fases", () => {

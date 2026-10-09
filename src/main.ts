@@ -100,7 +100,7 @@ function representarControles(): string {
 function representarInicio(): string {
   return `<main class="marco pantalla-inicio">
     <header class="cabecera">
-      <p class="sobrelinea">PROTOCOLO DE SINCRONÍA <span>///</span> MODO INFINITO</p>
+      <p class="sobrelinea">PROTOCOLO DE SINCRONÍA <span>///</span> PARTIDA RÚNICA</p>
       <h1>ESPEJO<span class="dos-puntos">:</span><br><span class="titulo-secundario">REFLEJO INVERTIDO</span></h1>
       <p class="subtitulo">Coordinación dual cyber-rúnica</p>
     </header>
@@ -110,7 +110,7 @@ function representarInicio(): string {
         <p class="frase-inicio">Dos matrices. Un solo pulso.</p>
         <ol class="reglas">
           <li><b>01</b><span>Muévete con <kbd>A</kbd> <kbd>D</kbd> o las flechas; el reflejo responde al mismo tiempo.</span></li>
-          <li><b>02</b><span>Esquiva los bloques rojos. Un impacto rompe tu combo, pero no la partida.</span></li>
+          <li><b>02</b><span>Esquiva los bloques rojos: un impacto termina la partida.</span></li>
           <li><b>03</b><span>Recoge gemas ámbar para puntuar, aumentar el combo y comprar aspectos.</span></li>
         </ol>
         <button class="boton-principal" type="button" data-accion="iniciar">INICIAR <span aria-hidden="true">↗</span></button>
@@ -121,7 +121,7 @@ function representarInicio(): string {
         <div class="aspectos">${representarAspectos()}</div>
       </aside>
     </div>
-    <footer class="ayuda"><span>UNA PARTIDA, SIN FINAL</span><p>Las colisiones cortan el combo; la sincronía continúa.</p></footer>
+    <footer class="ayuda"><span>CADA INTENTO CUENTA</span><p>Esquiva los bloques rojos y mantén viva la sincronía.</p></footer>
   </main>`;
 }
 
@@ -140,9 +140,10 @@ function representarTiendaCompacta(): string {
 }
 
 function representarPartida(): string {
+  const finalizada = estado.estado === 'derrota';
   return `<main class="marco pantalla-juego">
     <header class="cabecera cabecera-juego">
-      <p class="sobrelinea">ESPEJO <span>///</span> SESIÓN INFINITA</p>
+      <p class="sobrelinea">ESPEJO <span>///</span> SESIÓN ACTIVA</p>
       <h1>REFLEJO <span class="dos-puntos">:</span> <span class="titulo-secundario">INVERTIDO</span></h1>
       ${representarMarcadores()}
     </header>
@@ -158,7 +159,18 @@ function representarPartida(): string {
       </div>
       ${representarTiendaCompacta()}
     </div>
-    <p class="estado-vivo" aria-live="polite">El pulso continúa. Un impacto reinicia tu combo, no tu partida.</p>
+    <p class="estado-vivo" aria-live="polite">Esquiva los bloques y recoge gemas para ganar ámbar.</p>
+    <section class="modal-perdiste" data-resultado role="dialog" aria-modal="true" aria-labelledby="titulo-perdiste" ${finalizada ? '' : 'hidden'}>
+      <div class="panel-perdiste">
+        <p class="sobrelinea">IMPACTO REGISTRADO · ${estado.impactos}</p>
+        <h2 id="titulo-perdiste">PERDISTE</h2>
+        <p>La sincronía se rompió. Tu ámbar y aspectos siguen guardados.</p>
+        <div class="acciones-finales">
+          <button class="boton-principal" type="button" data-accion="reiniciar">REINICIAR JUEGO</button>
+          <button class="boton-secundario" type="button" data-accion="volver-inicio">VOLVER AL INICIO</button>
+        </div>
+      </div>
+    </section>
   </main>`;
 }
 
@@ -230,6 +242,18 @@ function actualizarPartida(): void {
     const avance = (estado.accionesSincronizadas % CONFIG.PASOS_PARA_COMBO) / CONFIG.PASOS_PARA_COMBO * 100;
     progreso.style.width = `${avance}%`;
   }
+  const resultado = raiz.querySelector<HTMLElement>('[data-resultado]');
+  if (resultado) {
+    resultado.hidden = estado.estado !== 'derrota';
+    const resumen = resultado.querySelector<HTMLElement>('.sobrelinea');
+    if (resumen) resumen.textContent = `IMPACTO REGISTRADO · ${estado.impactos}`;
+  }
+  const estadoVivo = raiz.querySelector<HTMLElement>('.estado-vivo');
+  if (estadoVivo) {
+    estadoVivo.textContent = estado.estado === 'derrota'
+      ? 'Partida finalizada por colisión.'
+      : 'Esquiva los bloques y recoge gemas para ganar ámbar.';
+  }
   actualizarTablero();
 }
 
@@ -261,6 +285,14 @@ function iniciarPartida(): void {
   temporizador = window.setInterval(avanzarPartida, CONFIG.INTERVALO_CAIDA);
 }
 
+function volverAlInicio(): void {
+  if (temporizador !== undefined) window.clearInterval(temporizador);
+  temporizador = undefined;
+  reiniciarPartida(estado, Date.now() >>> 0);
+  pantalla = 'inicio';
+  renderizar();
+}
+
 function accionar(direccion: Direccion): void {
   if (moverFichas(estado, direccion)) actualizarPartida();
 }
@@ -279,6 +311,10 @@ function avanzarPartida(): void {
   if (estado.ambar !== ambarAnterior) guardarProgreso();
   if (estado.siguienteId !== ultimoIdAnterior || estado.ambar !== ambarAnterior) actualizarTienda();
   actualizarPartida();
+  if (estado.estado !== 'en_curso' && temporizador !== undefined) {
+    window.clearInterval(temporizador);
+    temporizador = undefined;
+  }
 }
 
 raiz.addEventListener('click', (evento) => {
@@ -288,6 +324,11 @@ raiz.addEventListener('click', (evento) => {
 
   if (boton.dataset.accion === 'iniciar' || boton.dataset.accion === 'reiniciar') {
     iniciarPartida();
+    return;
+  }
+
+  if (boton.dataset.accion === 'volver-inicio') {
+    volverAlInicio();
     return;
   }
 
